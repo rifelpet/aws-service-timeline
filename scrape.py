@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -10,16 +11,18 @@ import xml.etree.ElementTree as ET
 # https://github.com/AwsGeek/aws-history https://www.awsgeek.com/pages/AWS-History/
 # https://aws.amazon.com/about-aws/global-infrastructure/regional-product-services/
 
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+REPO_DIR = os.path.join(SCRIPT_DIR, 'aws-sdk-java')
 
-REGIONS_XML_1_4_2 = './aws-sdk-java/src/main/resources/etc/regions.xml'
-REGIONS_XML_1_7_0 = './aws-sdk-java/src/main/resources/com/amazonaws/regions/regions.xml'
-REGIONS_XML_1_8_10 = './aws-sdk-java/aws-java-sdk-core/src/main/resources/com/amazonaws/regions/regions.xml'
-ENDPOINTS_JSON_1_10_51 = './aws-sdk-java/aws-java-sdk-core/src/main/resources/com/amazonaws/partitions/endpoints.json'
+REGIONS_XML_1_4_2      = os.path.join(REPO_DIR, 'src/main/resources/etc/regions.xml')
+REGIONS_XML_1_7_0      = os.path.join(REPO_DIR, 'src/main/resources/com/amazonaws/regions/regions.xml')
+REGIONS_XML_1_8_10     = os.path.join(REPO_DIR, 'aws-java-sdk-core/src/main/resources/com/amazonaws/regions/regions.xml')
+ENDPOINTS_JSON_1_10_51 = os.path.join(REPO_DIR, 'aws-java-sdk-core/src/main/resources/com/amazonaws/partitions/endpoints.json')
 
 # Services that arent region-specific
 SERVICE_BLACKLIST = ['discovery', 'groundstation', 'health', 'route53domains', 'ce', 'budgets', 'route53', 'iam']
 
-def run_command(cmd, cwd='./aws-sdk-java', retries=5, fatal=True) -> subprocess.CompletedProcess:
+def run_command(cmd, cwd=REPO_DIR, retries=5, fatal=True) -> subprocess.CompletedProcess:
   result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
   if result.returncode != 0:
     if 'too many open files' in result.stderr and retries > 0:
@@ -30,6 +33,11 @@ def run_command(cmd, cwd='./aws-sdk-java', retries=5, fatal=True) -> subprocess.
     if fatal:
       sys.exit(1)
   return result
+
+def ensure_repo():
+  if os.path.exists(REPO_DIR):
+    return
+  run_command(["git", "clone", "https://github.com/aws/aws-sdk-java.git"], cwd=SCRIPT_DIR)
 
 # Parses the endpoints.json file from 1.10.51 and newer
 def parse_endpoints_json(region_timeline, tag_date: str, filename: str):
@@ -42,13 +50,12 @@ def parse_endpoints_json(region_timeline, tag_date: str, filename: str):
         service = service.replace('api.', '')
         if service in SERVICE_BLACKLIST:
           continue
-        #print(service, endpoints['endpoints'])
         for region in endpoints['endpoints'].keys():
           region = region.lower()
           if 'dualstack' in region or 'fips' in region.lower() or region in ['local', 'sandbox']:
             continue
           if region not in region_timeline:
-            print('Adding new region', region)
+            print('Found new region', region)
             region_timeline[region] = {}
           if service not in region_timeline[region]:
             region_timeline[region][service] = {'date': tag_date}
@@ -68,15 +75,16 @@ def parse_regions_xml(region_timeline, tag_date: str, filename: str):
         elif child2.tag == 'RegionName':
           region = child2.text
           if region not in region_timeline:
-            print('Adding new region', region)
+            print('Found new region', region)
             region_timeline[region] = {}
           if service_name not in region_timeline[region]:
             region_timeline[region][service_name] = {'date': tag_date}
   return region_timeline
 
 def main():
+  ensure_repo()
   # region_timeline is a dict of the format:
-  # {"us-east-1": {"s3": {"date": "0000-00-00"}} 
+  # {"us-east-1": {"s3": {"date": "YYYY-MM-DD"}} 
   region_timeline = {}
   run_command(["git", "fetch", "--all"], fatal=False)
   run_command(["git", "checkout", "--", "."])
@@ -91,11 +99,11 @@ def main():
     if tag_info == '':
       continue
     tag_date, tag_name = tag_info.split(' ')
-    if 'rc' in tag_name:
-      print('Skipping', tag_name)
+    # Skip 1.0 and 1.1 releases because they don't contain endpoint information
+    if 'rc' in tag_name or re.match(r'^1\.[01](\.\d+(\.\d)?)?$', tag_name):
       continue
-    #print(tagDate)
-    print(tag_name)
+
+    print(tag_date, tag_name)
 
     cmd = run_command(["git", "checkout", tag_name])
     
