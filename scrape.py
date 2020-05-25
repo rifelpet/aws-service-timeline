@@ -97,21 +97,22 @@ def parse_regions_xml(raw_timeline, tag_date: str, filename: str):
 def main():
     """Scrapes the aws-sdk-java repo for region/service release timing inforation"""
     ensure_repo()
-    # raw_timeline is a dict of the format:
-    # {'us-east-1': {'s3': {'date': 'YYYY-MM-DD'}}
-    raw_timeline = {}
     cmd = run_command(['git', 'log', '--tags', '--simplify-by-decoration', '--pretty=%ad %S', '--date=format:%Y-%m-%d'])
 
     # Skip early releases because they don't contain endpoint information
     tags_info = list(filter(lambda t: t != '' and 'rc' not in t and not re.match(r'^201[01]', t), cmd.stdout.split('\n')))
-
     tags_info.reverse()
+
+    # raw_timeline is a dict of the format:
+    # {'us-east-1': {'s3': {'date': 'YYYY-MM-DD'}}
+    raw_timeline = {}
+
     for tag_info in tags_info:
         tag_date, tag_name = tag_info.split(' ')
 
         print(tag_date, tag_name)
 
-        cmd = run_command(['git', 'checkout', tag_name])
+        run_command(['git', 'checkout', tag_name])
 
         # At least Java SDK 1.10.51
         if os.path.exists(ENDPOINTS_JSON_1_10_51):
@@ -125,7 +126,6 @@ def main():
         # Java SDK 1.4.2 - 1.6.9
         elif os.path.exists(REGIONS_XML_1_4_2):
             raw_timeline = parse_regions_xml(raw_timeline, tag_date, REGIONS_XML_1_4_2)
-
 
     timeline_by_region = {}
     timeline_by_service = {}
@@ -150,15 +150,13 @@ def main():
                     curr_date < datetime.strptime(service_launch_dates[service], '%Y-%m-%d'):
                 service_launch_dates[service] = release['date']
 
-    report = {
-        'ByRegion': timeline_by_region,
-        'ByService': timeline_by_service,
-        'ServiceLaunchDates': service_launch_dates,
-        'RegionLaunchDates': region_launch_dates
-    }
-
     with open('region_timeline.json', 'w') as f:
-        json.dump(report, f)
+        json.dump({
+            'ByRegion': timeline_by_region,
+            'ByService': timeline_by_service,
+            'ServiceLaunchDates': service_launch_dates,
+            'RegionLaunchDates': region_launch_dates
+        }, f)
     print('scrape complete')
 
 main()
