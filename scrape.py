@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Scrapes the aws-sdk-java repo for region/service release timing inforation saved to"""
-import datetime
+from datetime import datetime
 import json
 import os
 import re
