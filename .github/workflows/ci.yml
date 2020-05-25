@@ -15,3 +15,4 @@ jobs:
       - uses: ricardochaves/python-lint@v1.1.0
         with:
           python-root-list: "scrape.py"
+          extra-pylint-options: "--rcfile=.pylintrc"

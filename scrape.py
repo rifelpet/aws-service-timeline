@@ -27,6 +27,7 @@ SERVICE_BLACKLIST = ['discovery', 'groundstation', 'health', 'route53domains', '
 # Region endpoints that aren't actual AWS regions
 REGION_BLACKLIST = ['aws-global', 'local', 's3-external-1', 'sandbox', 'us-east-1-regional']
 
+
 def run_command(cmd, cwd=REPO_DIR, retries=5, fatal=True) -> subprocess.CompletedProcess:
     """Runs a command with retry/backoff returning the result"""
     result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False)
@@ -39,6 +40,7 @@ def run_command(cmd, cwd=REPO_DIR, retries=5, fatal=True) -> subprocess.Complete
         if fatal:
             sys.exit(1)
     return result
+
 
 def ensure_repo():
     """Ensures the aws-sdk-java git repo exists"""
@@ -74,6 +76,7 @@ def parse_endpoints_json(raw_timeline, tag_date: str, filename: str):
                         raw_timeline[region][service] = {'date': tag_date}
     return raw_timeline
 
+
 def parse_regions_xml(raw_timeline, tag_date: str, filename: str):
     """Parses the regions.xml file from 1.8.10 to 1.10.51"""
     tree = ET.parse(filename)
@@ -93,6 +96,7 @@ def parse_regions_xml(raw_timeline, tag_date: str, filename: str):
                     if service_name not in raw_timeline[region]:
                         raw_timeline[region][service_name] = {'date': tag_date}
     return raw_timeline
+
 
 def main():
     """Scrapes the aws-sdk-java repo for region/service release timing inforation"""
