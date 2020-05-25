@@ -1,7 +1,7 @@
 const defaultSlice = "us-east-1";
 
 function loadTimeline(cb) {
-  var xhttp = new XMLHttpRequest();
+  let xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
      cb(JSON.parse(this.responseText));
@@ -12,41 +12,41 @@ function loadTimeline(cb) {
 }
 
 function populateDropdowns(regions, services, cb) {
-  var regionSelect = document.getElementById("regions");
+  let regionSelect = document.getElementById("regions");
   regions.forEach(function (region) {
-    var option = document.createElement("option");
-    var text = document.createTextNode(region);
+    let option = document.createElement("option");
+    let text = document.createTextNode(region);
     option.appendChild(text);
     if (region === defaultSlice) {
       option.setAttribute('selected', true);
     }
     regionSelect.appendChild(option);
   });
-  var serviceSelect = document.getElementById("services");
+  let serviceSelect = document.getElementById("services");
   services.forEach(function (service) {
-    var option = document.createElement("option");
-    var text = document.createTextNode(service);
+    let option = document.createElement("option");
+    let text = document.createTextNode(service);
     option.appendChild(text);
     serviceSelect.appendChild(option);
   });
   cb();
 }
 
-document.addEventListener('DOMContentLoaded', function(event) {
+document.addEventListener('DOMContentLoaded', function() {
   loadTimeline(function(rawData) {
-    var regionTimeline = rawData['ByRegion'];
-    var serviceLaunchDates = rawData['ServiceLaunchDates'];
-    var regionLaunchDates = rawData['RegionLaunchDates'];
-    var regions = Object.keys(regionLaunchDates).sort();
-    var services = Object.keys(serviceLaunchDates).sort();
+    let regionTimeline = rawData['ByRegion'];
+    let serviceLaunchDates = rawData['ServiceLaunchDates'];
+    let regionLaunchDates = rawData['RegionLaunchDates'];
+    let regions = Object.keys(regionLaunchDates).sort();
+    let services = Object.keys(serviceLaunchDates).sort();
 
     populateDropdowns(regions, services, function() {
-      var data = [];
+      let data = [];
       regions.forEach(function (region) {
         if (region != 'eu-west-1') {
           return
         }
-        var trace = {
+        let trace = {
           //x: [20, 14, 23],
           y: services,
           name: region,
@@ -56,13 +56,13 @@ document.addEventListener('DOMContentLoaded', function(event) {
           },
           type: 'bar'
         };
-        x = []
+        let x = []
         // regionServices = [];
         services.forEach(function (service){
-          var startDate = serviceLaunchDates[service];
+          let startDate = serviceLaunchDates[service];
           if (service in regionTimeline[region]) {
-            var regionDate = Date.parse(regionTimeline[region][service]["date"])
-            var delayWeeks = (regionDate - startDate) / 1000 / 60 / 60 / 24 / 7;
+            let regionDate = Date.parse(regionTimeline[region][service]["date"])
+            let delayWeeks = (regionDate - startDate) / 1000 / 60 / 60 / 24 / 7;
             x.push(delayWeeks)
           } else {
             x.push(-100)

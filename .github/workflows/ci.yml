@@ -3,7 +3,7 @@ on: [push]
 
 
 jobs:
-  build:
+  python:
     name: python
     runs-on: ubuntu-latest
     steps:
@@ -20,3 +20,18 @@ jobs:
           use-black: false
           use-mypy: false
           use-isort: false
+  eslint:
+    name: eslint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: install node v12
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12
+    - name: npm install eslint
+      run: npm install eslint
+    - name: eslint
+      uses: icrawl/action-eslint@v1
+      with:
+        custom-glob: timeline.js
