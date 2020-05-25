@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Scrapes the aws-sdk-java repo for region/service release timing inforation saved to"""
+import datetime
 import json
 import os
 import re
@@ -21,8 +22,10 @@ REGIONS_XML_1_7_0      = os.path.join(REPO_DIR, 'src/main/resources/com/amazonaw
 REGIONS_XML_1_8_10     = os.path.join(REPO_DIR, 'aws-java-sdk-core/src/main/resources/com/amazonaws/regions/regions.xml')
 ENDPOINTS_JSON_1_10_51 = os.path.join(REPO_DIR, 'aws-java-sdk-core/src/main/resources/com/amazonaws/partitions/endpoints.json')
 
-# Services that arent region-specific
+# Services that aren't region-specific
 SERVICE_BLACKLIST = ['discovery', 'groundstation', 'health', 'route53domains', 'ce', 'budgets', 'route53', 'iam']
+# Region endpoints that aren't actual AWS regions
+REGION_BLACKLIST = ['aws-global', 'local', 's3-external-1', 'sandbox', 'us-east-1-regional']
 
 def run_command(cmd, cwd=REPO_DIR, retries=5, fatal=True) -> subprocess.CompletedProcess:
     """Runs a command with retry/backoff returning the result"""
@@ -57,7 +60,7 @@ def parse_endpoints_json(raw_timeline, tag_date: str, filename: str):
                     continue
                 for region in endpoints['endpoints'].keys():
                     region = region.lower()
-                    if 'dualstack' in region or 'fips' in region.lower() or region in ['local', 'sandbox']:
+                    if 'dualstack' in region or 'fips' in region or region in REGION_BLACKLIST:
                         continue
                     if region not in raw_timeline:
                         print('Found new region', region)
