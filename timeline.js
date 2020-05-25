@@ -1,3 +1,5 @@
+const defaultSlice = "us-east-1";
+
 function loadTimeline(cb) {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
@@ -9,6 +11,27 @@ function loadTimeline(cb) {
   xhttp.send();
 }
 
+function populateDropdowns(regions, services, cb) {
+  var regionSelect = document.getElementById("regions");
+  regions.forEach(function (region) {
+    var option = document.createElement("option");
+    var text = document.createTextNode(region);
+    option.appendChild(text);
+    if (region === defaultSlice) {
+      option.setAttribute('selected', true);
+    }
+    regionSelect.appendChild(option);
+  });
+  var serviceSelect = document.getElementById("services");
+  services.forEach(function (service) {
+    var option = document.createElement("option");
+    var text = document.createTextNode(service);
+    option.appendChild(text);
+    serviceSelect.appendChild(option);
+  });
+  cb();
+}
+
 document.addEventListener('DOMContentLoaded', function(event) {
   loadTimeline(function(rawData) {
     var regionTimeline = rawData['ByRegion'];
@@ -16,56 +39,42 @@ document.addEventListener('DOMContentLoaded', function(event) {
     var regionLaunchDates = rawData['RegionLaunchDates'];
     var regions = Object.keys(regionLaunchDates).sort();
     var services = Object.keys(serviceLaunchDates).sort();
-    regions.forEach(function (region) {
-      var option = document.createElement("option");
-      var text = document.createTextNode(region);
-      option.appendChild(text);
-  
-      var select = document.getElementById("regions");
-      select.appendChild(option);
-    });
-    services.forEach(function (service) {
-      var option = document.createElement("option");
-      var text = document.createTextNode(service);
-      option.appendChild(text);
-  
-      var select = document.getElementById("services");
-      select.appendChild(option);
-    });
-    var data = [];
-    regions.forEach(function (region) {
-      if (region != 'eu-west-1') {
-        return
-      }
-      var trace = {
-        //x: [20, 14, 23],
-        y: services,
-        name: region,
-        orientation: 'h',
-        marker: {
-          width: 1
-        },
-        type: 'bar'
-      };
-      x = []
-      // regionServices = [];
-      services.forEach(function (service){
-        var startDate = serviceLaunchDates[service];
-        if (service in regionTimeline[region]) {
-          var regionDate = Date.parse(regionTimeline[region][service]["date"])
-          var delay = (regionDate - startDate) / 1000 / 60 / 60 / 24;
-          x.push(delay)
-        } else {
-          x.push(-100)
+
+    populateDropdowns(regions, services, function() {
+      var data = [];
+      regions.forEach(function (region) {
+        if (region != 'eu-west-1') {
+          return
+        }
+        var trace = {
+          //x: [20, 14, 23],
+          y: services,
+          name: region,
+          orientation: 'h',
+          marker: {
+            width: 1
+          },
+          type: 'bar'
+        };
+        x = []
+        // regionServices = [];
+        services.forEach(function (service){
+          var startDate = serviceLaunchDates[service];
+          if (service in regionTimeline[region]) {
+            var regionDate = Date.parse(regionTimeline[region][service]["date"])
+            var delayWeeks = (regionDate - startDate) / 1000 / 60 / 60 / 24 / 7;
+            x.push(delayWeeks)
+          } else {
+            x.push(-100)
+          }
+        });
+        trace["x"] = x;
+        if (x.length > 0) {
+          data.push(trace);
         }
       });
-      trace["x"] = x;
-      if (x.length > 0) {
-        data.push(trace);
-      }
-    });
-  
-    Plotly.newPlot('graph', data, {showSendToCloud:true});
-  })
 
+      Plotly.newPlot('graph', data, {showSendToCloud:true});
+    })
+  })
 })

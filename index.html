@@ -4,13 +4,11 @@
     <script src="timeline.js"></script>
   </head>
 <body>
-  <label for="region">Region:</label>
-  <select name="region" id="regions">
-  </select> 
-
-  <label for="service">Service:</label>
-  <select name="service" id="services">
-  </select> 
+  <label for="slice">Slice By:</label>
+  <select name="slice" id="slice" onchange="">
+    <optgroup label="Regions" id="regions"></optgroup>
+    <optgroup label="Services" id="services"></optgroup>
+  </select>
 
   <div id="graph" style="width: 1200px; height: 7200px;"></div>
 </body>
