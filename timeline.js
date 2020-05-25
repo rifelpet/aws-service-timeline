@@ -1,10 +1,24 @@
 const defaultSlice = "us-east-1";
 
+// Parse all dates into Date objects
+if (window.JSON && !window.JSON.dateParser) {
+  var reDate = /^(\d{4})-(\d{2})-(\d{2})$/;
+ 
+  JSON.dateParser = function (key, value) {
+      if (typeof value === 'string') {
+          var a = reDate.exec(value);
+          if (a)
+              return new Date(value);
+      }
+      return value;
+  };
+}
+
 function loadTimeline(cb) {
   let xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-     cb(JSON.parse(this.responseText));
+     cb(JSON.parse(this.responseText,JSON.dateParser));
     }
   };
   xhttp.open("GET", "region_timeline.json", true);
@@ -34,14 +48,18 @@ function populateDropdowns(regions, services) {
 document.addEventListener('DOMContentLoaded', function() {
   loadTimeline(function(rawData) {
     let regionTimeline = rawData['ByRegion'];
+
     let serviceLaunchDates = rawData['ServiceLaunchDates'];
+    let services = Object.keys(serviceLaunchDates).sort();
+
     let regionLaunchDates = rawData['RegionLaunchDates'];
     let regions = Object.keys(regionLaunchDates).sort();
-    let services = Object.keys(serviceLaunchDates).sort();
 
     populateDropdowns(regions, services);
     let data = [];
     regions.forEach(function (region) {
+      let regionLaunchDate = regionLaunchDates[region];
+      
       let trace = {
         //x: [20, 14, 23],
         y: services,
@@ -52,16 +70,20 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         type: 'bar'
       };
-      let x = []
-      // regionServices = [];
+      let x = [];
       services.forEach(function (service){
-        let startDate = serviceLaunchDates[service];
+        let serviceLaunchDate = serviceLaunchDates[service];
         if (service in regionTimeline[region]) {
-          let regionDate = Date.parse(regionTimeline[region][service]["date"])
-          let delayWeeks = (regionDate - startDate) / 1000 / 60 / 60 / 24 / 7;
-          x.push(delayWeeks)
+          // We want the difference between the date the region or service was launched (whichever is greater)
+          // and the date the service was expanded into this region
+          let regionServiceLaunchDate = Math.max.apply(null, [regionLaunchDate, serviceLaunchDate]);
+          let regionServiceExpansionDate = regionTimeline[region][service]["date"];
+          let delayWeeks = Math.floor((regionServiceExpansionDate - regionServiceLaunchDate) / 1000 / 60 / 60 / 24 / 7);
+          x.push(delayWeeks);
         } else {
-          x.push(-100)
+          // The service hasnt been expanded into this region yet
+          // TODO: handle this better
+          x.push(-1);
         }
       });
       trace["x"] = x;
@@ -69,7 +91,12 @@ document.addEventListener('DOMContentLoaded', function() {
         data.push(trace);
       }
     });
-
-    Plotly.newPlot('graph', data, {showSendToCloud:true});
+    let layout = {
+      showSendToCloud:false,
+      yaxis: {
+        categoryorder: "category descending"
+      }
+    };
+    Plotly.newPlot('graph', data, layout, {displaylogo: false});
   })
 })
