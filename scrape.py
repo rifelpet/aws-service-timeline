@@ -45,6 +45,11 @@ def ensure_repo():
     if os.path.exists(REPO_DIR):
         return
     run_command(['git', 'clone', REPO_URL], cwd=SCRIPT_DIR)
+    run_command(['git', 'fetch', '--all'], fatal=False)
+    run_command(['git', 'checkout', '--', '.'])
+    run_command(['git', 'reset', '--hard'])
+    run_command(['git', 'clean', '-dfx'])
+    run_command(['git', 'clean', '-dfX'])
 
 
 def parse_endpoints_json(raw_timeline, tag_date: str, filename: str):
@@ -95,22 +100,14 @@ def main():
     # raw_timeline is a dict of the format:
     # {'us-east-1': {'s3': {'date': 'YYYY-MM-DD'}}
     raw_timeline = {}
-    run_command(['git', 'fetch', '--all'], fatal=False)
-    run_command(['git', 'checkout', '--', '.'])
-    run_command(['git', 'reset', '--hard'])
-    run_command(['git', 'clean', '-dfx'])
-    run_command(['git', 'clean', '-dfX'])
     cmd = run_command(['git', 'log', '--tags', '--simplify-by-decoration', '--pretty=%ad %S', '--date=format:%Y-%m-%d'])
-    tags_info = cmd.stdout.split('\n')
+
+    # Skip early releases because they don't contain endpoint information
+    tags_info = list(filter(lambda t: t != '' and 'rc' not in t and not re.match(r'^201[01]', t), cmd.stdout.split('\n')))
 
     tags_info.reverse()
     for tag_info in tags_info:
-        if tag_info == '':
-            continue
         tag_date, tag_name = tag_info.split(' ')
-        # Skip 1.0 and 1.1 releases because they don't contain endpoint information
-        if 'rc' in tag_name or re.match(r'^1\.[01](\.\d+(\.\d)?)?$', tag_name):
-            continue
 
         print(tag_date, tag_name)
 
