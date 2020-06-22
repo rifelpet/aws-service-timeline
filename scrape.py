@@ -47,7 +47,7 @@ def ensure_repo():
     if os.path.exists(REPO_DIR):
         return
     run_command(['git', 'clone', REPO_URL], cwd=SCRIPT_DIR)
-    run_command(['git', 'fetch', '--all'], fatal=False)
+    run_command(['git', 'fetch', '--all', '--tags'], fatal=False)
     run_command(['git', 'checkout', '--', '.'])
     run_command(['git', 'reset', '--hard'])
     run_command(['git', 'clean', '-dfx'])
